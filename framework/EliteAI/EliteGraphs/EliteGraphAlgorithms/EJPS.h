@@ -6,7 +6,7 @@ namespace Elite
 	class JPS
 	{
 	public:
-		JPS(IGraph<T_NodeType, T_ConnectionType>* pGraph, Heuristic hFunction);
+		JPS(GridGraph<T_NodeType, T_ConnectionType>* pGraph, Heuristic hFunction);
 
 		// stores the optimal connection to a node and its total costs related to the start and end node of the path
 		struct NodeRecord
@@ -32,15 +32,15 @@ namespace Elite
 		float GetHeuristicCost(T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 
 		T_NodeType* Jump(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
-		//T_NodeType HorSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
+		T_NodeType HorSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 		//T_NodeType VerSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 
-		IGraph<T_NodeType, T_ConnectionType>* m_pGraph;
+		GridGraph<T_NodeType, T_ConnectionType>* m_pGraph;
 		Heuristic m_HeuristicFunction;
 	};
 
 	template <class T_NodeType, class T_ConnectionType>
-	JPS<T_NodeType, T_ConnectionType>::JPS(IGraph<T_NodeType, T_ConnectionType>* pGraph, Heuristic hFunction)
+	JPS<T_NodeType, T_ConnectionType>::JPS(GridGraph<T_NodeType, T_ConnectionType>* pGraph, Heuristic hFunction)
 		: m_pGraph(pGraph)
 		, m_HeuristicFunction(hFunction)
 	{
@@ -49,7 +49,7 @@ namespace Elite
 	template <class T_NodeType, class T_ConnectionType>
 	std::vector<T_NodeType*> JPS<T_NodeType, T_ConnectionType>::FindPath(T_NodeType* pStartNode, T_NodeType* pGoalNode)
 	{
-		Jump(pStartNode, -1, 0, pStartNode, pGoalNode);
+		Jump(pStartNode, 1, 1, pStartNode, pGoalNode);
 
 		return vector<T_NodeType*>();
 	}
@@ -61,26 +61,43 @@ namespace Elite
 		int connections{ 0 };
 
 		T_NodeType* pNewNode = nullptr;
-		for (T_ConnectionType* connection : m_pGraph->GetNodeConnections(parent->GetIndex()))
-		{
-			connections++;
-			if (m_pGraph->GetNodePos(connection->GetTo()) == Vector2{ m_pGraph->GetNodePos(parent).x + horizontal,  m_pGraph->GetNodePos(parent).y + vertical })
-			{
-				pNewNode = m_pGraph->GetNode(connection->GetTo());
-				break;
-			}
-		}
-		//all connections were wrong
-		if (connections == m_pGraph->GetNodeConnections(parent->GetIndex()).size())
-			return NULL;//there is no connection to the next node wanted
 
+		
+		int newNodeIdx = m_pGraph->GetIndex(m_pGraph->GetNodePos(parent).x + horizontal, m_pGraph->GetNodePos(parent).y + vertical);//get new node idx from position
+		if (newNodeIdx < 0)//check if the node is in the grid boundaries;
+			return nullptr;
+
+		pNewNode = m_pGraph->GetNode(newNodeIdx);
+		if (pNewNode->GetTerrainType() == TerrainType::Water)//check if node isnt blocked
+			return nullptr;
 
 		//the new node found is the endNode
 		if (pNewNode == pEndNode)
 			return pNewNode;
 
-		
 
+
+		
+		//current search is a diagonal search
+		if (horizontal != 0 && vertical != 0)
+		{
+
+		}
+		else if(horizontal != 0)//horizontal search
+		{
+
+		}
+		else//vertical search
+		{
+
+		}
+
+
+	}
+
+	template <class T_NodeType, class T_ConnectionType>
+	T_NodeType Elite::JPS<T_NodeType, T_ConnectionType>::HorSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const
+	{
 
 	}
 

@@ -35,6 +35,8 @@ namespace Elite
 		T_NodeType HorSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 		//T_NodeType VerSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 
+		bool IsNodeBlocked(int col, int row) const;
+
 		GridGraph<T_NodeType, T_ConnectionType>* m_pGraph;
 		Heuristic m_HeuristicFunction;
 	};
@@ -49,7 +51,7 @@ namespace Elite
 	template <class T_NodeType, class T_ConnectionType>
 	std::vector<T_NodeType*> JPS<T_NodeType, T_ConnectionType>::FindPath(T_NodeType* pStartNode, T_NodeType* pGoalNode)
 	{
-		Jump(pStartNode, 1, 1, pStartNode, pGoalNode);
+		Jump(pStartNode, 1, 0, pStartNode, pGoalNode);
 
 		return vector<T_NodeType*>();
 	}
@@ -59,38 +61,52 @@ namespace Elite
 	{
 		//position of new node
 		int connections{ 0 };
+		Elite::Vector2 nextPos{ m_pGraph->GetNodePos(parent) + Elite::Vector2{float(horizontal), float(vertical)} };
 
-		T_NodeType* pNewNode = nullptr;
-
-		
-		int newNodeIdx = m_pGraph->GetIndex(m_pGraph->GetNodePos(parent).x + horizontal, m_pGraph->GetNodePos(parent).y + vertical);//get new node idx from position
-		if (newNodeIdx < 0)//check if the node is in the grid boundaries;
+		if (IsNodeBlocked(int(nextPos.x), int(nextPos.y)))//node is either out of bound or blocked(water)
+		{
 			return nullptr;
+		}
 
-		pNewNode = m_pGraph->GetNode(newNodeIdx);
-		if (pNewNode->GetTerrainType() == TerrainType::Water)//check if node isnt blocked
-			return nullptr;
 
 		//the new node found is the endNode
-		if (pNewNode == pEndNode)
-			return pNewNode;
-
-
+		if (nextPos == m_pGraph->GetNodePos(pEndNode))
+			return pEndNode;
 
 		
-		//current search is a diagonal search
-		if (horizontal != 0 && vertical != 0)
+		
+		if (horizontal != 0 && vertical != 0)//current search is a diagonal search
 		{
 
 		}
 		else if(horizontal != 0)//horizontal search
 		{
+			Elite::Vector2 currentPos{ m_pGraph->GetNodePos(parent) };
+
+			if (!IsNodeBlocked(int(nextPos.x), int(nextPos.y + 1)))//check if node diagonal up is free 
+			{
+				if (IsNodeBlocked(int(currentPos.x), int(currentPos.y + 1)))//check if node above is blocked
+				{
+					return parent;//return the current that it is at 
+				}
+			}
+
+			if (!IsNodeBlocked(int(nextPos.x), int(nextPos.y - 1)))//check if node diagonal donw is free 
+			{
+				if (IsNodeBlocked(int(currentPos.x), int(currentPos.y - 1)))//check if node below is blocked
+				{
+					return parent;//return the current that it is at 
+				}
+			}
 
 		}
 		else//vertical search
 		{
 
 		}
+
+		T_NodeType* nextNode{m_pGraph->GetNode(int(nextPos.x), int(nextPos.y))};
+		Jump(nextNode, horizontal, vertical, pStartNode, pEndNode);
 
 
 	}
@@ -99,6 +115,19 @@ namespace Elite
 	T_NodeType Elite::JPS<T_NodeType, T_ConnectionType>::HorSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const
 	{
 
+	}
+
+	template <class T_NodeType, class T_ConnectionType>
+	bool Elite::JPS<T_NodeType, T_ConnectionType>::IsNodeBlocked(int col, int row) const
+	{
+		if (!m_pGraph->IsWithinBounds(col, row))//check if the node is in the grid boundaries;
+			return true;
+
+		int nodeIdx = m_pGraph->GetIndex(col, row);//get node idx from position
+		if (m_pGraph->GetNode(nodeIdx)->GetTerrainType() == TerrainType::Water)//check if node isnt blocked
+			return true;
+
+		return false;
 	}
 
 

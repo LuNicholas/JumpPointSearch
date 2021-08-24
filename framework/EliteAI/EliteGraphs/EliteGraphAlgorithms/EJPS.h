@@ -259,6 +259,19 @@ namespace Elite
 		{
 			//check horizontal and vertical for 
 			
+			if (IsNodeBlocked(nextPos.x - horizontal, nextPos.y))
+			{
+				if(!IsNodeBlocked(nextPos.x - horizontal, nextPos.y + vertical))
+					return m_pGraph->GetNode(int(nextPos.x), int(nextPos.y));
+			}
+
+			if (IsNodeBlocked(nextPos.x, nextPos.y - vertical))
+			{
+				if (!IsNodeBlocked(nextPos.x + horizontal, nextPos.y - vertical))
+					return m_pGraph->GetNode(int(nextPos.x), int(nextPos.y));
+			}
+
+
 			if (Jump(m_pGraph->GetNode(int(nextPos.x), int(nextPos.y)), horizontal, 0, pStartNode, pEndNode) != nullptr ||
 				Jump(m_pGraph->GetNode(int(nextPos.x), int(nextPos.y)), 0, vertical, pStartNode, pEndNode) != nullptr)
 			{

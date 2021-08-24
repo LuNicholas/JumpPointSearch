@@ -31,9 +31,8 @@ namespace Elite
 	private:
 		float GetHeuristicCost(T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 
+		//std::vector<T_NodeType*> GetSuccessors(T_NodeType* currentNode, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 		T_NodeType* Jump(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
-		T_NodeType HorSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
-		//T_NodeType VerSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 
 		bool IsNodeBlocked(int col, int row) const;
 
@@ -51,7 +50,7 @@ namespace Elite
 	template <class T_NodeType, class T_ConnectionType>
 	std::vector<T_NodeType*> JPS<T_NodeType, T_ConnectionType>::FindPath(T_NodeType* pStartNode, T_NodeType* pGoalNode)
 	{
-		Jump(pStartNode, 1, 0, pStartNode, pGoalNode);
+		Jump(pStartNode, 1, 1, pStartNode, pGoalNode);
 
 		return vector<T_NodeType*>();
 	}
@@ -77,32 +76,55 @@ namespace Elite
 		
 		if (horizontal != 0 && vertical != 0)//current search is a diagonal search
 		{
+			//check horizontal and vertical for 
+
+			if (Jump(parent, horizontal, 0, pStartNode, pEndNode) != nullptr ||
+				Jump(parent, 0, vertical, pStartNode, pEndNode) != nullptr)
+			{
+				return parent;
+			}
+
 
 		}
 		else if(horizontal != 0)//horizontal search
 		{
 			Elite::Vector2 currentPos{ m_pGraph->GetNodePos(parent) };
 
-			if (!IsNodeBlocked(int(nextPos.x), int(nextPos.y + 1)))//check if node diagonal up is free 
+			if (!IsNodeBlocked(int(nextPos.x), int(nextPos.y + 1)))//check if node above next pos is free
 			{
-				if (IsNodeBlocked(int(currentPos.x), int(currentPos.y + 1)))//check if node above is blocked
+				if (IsNodeBlocked(int(currentPos.x), int(currentPos.y + 1)))//check if node above current position is blocked
 				{
 					return parent;//return the current that it is at 
 				}
 			}
 
-			if (!IsNodeBlocked(int(nextPos.x), int(nextPos.y - 1)))//check if node diagonal donw is free 
+			if (!IsNodeBlocked(int(nextPos.x), int(nextPos.y - 1)))//check if node below next pos is free
 			{
-				if (IsNodeBlocked(int(currentPos.x), int(currentPos.y - 1)))//check if node below is blocked
+				if (IsNodeBlocked(int(currentPos.x), int(currentPos.y - 1)))//check if node below current position is blocked
 				{
 					return parent;//return the current that it is at 
 				}
 			}
-
 		}
 		else//vertical search
 		{
+			Elite::Vector2 currentPos{ m_pGraph->GetNodePos(parent) };
 
+			if (!IsNodeBlocked(int(nextPos.x + 1), int(nextPos.y)))//check if node right of the next node is free 
+			{
+				if (IsNodeBlocked(int(currentPos.x + 1), int(currentPos.y)))//check if node right of current position is blocked
+				{
+					return parent;//return the current that it is at 
+				}
+			}
+
+			if (!IsNodeBlocked(int(nextPos.x - 1), int(nextPos.y)))//check if node left of the next node is free 
+			{
+				if (IsNodeBlocked(int(currentPos.x - 1), int(currentPos.y)))///check if node left of current position is blocked
+				{
+					return parent;//return the current that it is at 
+				}
+			}
 		}
 
 		T_NodeType* nextNode{m_pGraph->GetNode(int(nextPos.x), int(nextPos.y))};
@@ -111,11 +133,6 @@ namespace Elite
 
 	}
 
-	template <class T_NodeType, class T_ConnectionType>
-	T_NodeType Elite::JPS<T_NodeType, T_ConnectionType>::HorSearch(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const
-	{
-
-	}
 
 	template <class T_NodeType, class T_ConnectionType>
 	bool Elite::JPS<T_NodeType, T_ConnectionType>::IsNodeBlocked(int col, int row) const

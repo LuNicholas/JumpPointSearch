@@ -63,6 +63,11 @@ namespace Elite
 		TerrainType GetTerrainType() const { return m_Terrain; }
 		void SetTerrainType(TerrainType terrain) { m_Terrain = terrain; }
 
+		bool operator==(const GridTerrainNode& other) const
+		{
+			return m_Index == other.m_Index;
+		};
+
 	protected:
 		TerrainType m_Terrain;
 	};

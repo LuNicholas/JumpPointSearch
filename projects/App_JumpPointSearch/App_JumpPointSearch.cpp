@@ -4,6 +4,7 @@
 //Includes
 #include "App_JumpPointSearch.h"
 #include "framework\EliteAI\EliteGraphs\EliteGraphAlgorithms\EJPS.h"
+#include "framework\EliteAI\EliteGraphs\EliteGraphAlgorithms\EAStar.h"
 #include "framework\EliteAI\EliteGraphs\EliteGraphAlgorithms\EBFS.h"
 
 using namespace Elite;
@@ -79,7 +80,22 @@ void App_PathfindingJPS::Update(float deltaTime)
 		auto endNode = m_pGridGraph->GetNode(endPathIdx);
 
 		auto pathfinder = JPS<GridTerrainNode, GraphConnection>(m_pGridGraph, m_pHeuristicFunction);
-		m_vPath = pathfinder.FindPath(startNode, endNode);
+		auto jumpPoints = pathfinder.FindPath(startNode, endNode);
+
+		auto aStarPathfinder = AStar<GridTerrainNode, GraphConnection>(m_pGridGraph, m_pHeuristicFunction);
+		std::vector<GridTerrainNode*> JumpPath;
+		m_vPath.clear();
+		if (jumpPoints.size() >= 2)
+		{
+			for (int idx{ 0 }; idx < jumpPoints.size() - 1; idx++)
+			{
+				JumpPath = aStarPathfinder.FindPath(jumpPoints.at(idx), jumpPoints.at(idx + 1));
+				m_vPath.insert(m_vPath.end(), JumpPath.begin(), JumpPath.end());
+			}
+		}
+
+
+		m_pGridGraph->
 
 
 		m_UpdatePath = false;

@@ -8,11 +8,14 @@ namespace Elite
 	public:
 		JPS(GridGraph<T_NodeType, T_ConnectionType>* pGraph, Heuristic hFunction);
 
-		
+
 		struct JPSNode
 		{
 			T_NodeType* pNode = nullptr;
-			T_NodeType* pParentNode = nullptr;
+			JPSNode* pParentNode = nullptr;
+			float costSoFar = 0.f; // accumulated g-costs of all the connections leading up to this one
+			float estimatedTotalCost = 0.f; // f-cost (= costSoFar + h-cost)
+
 
 
 			bool operator==(const JPSNode& other) const
@@ -20,9 +23,14 @@ namespace Elite
 				return pNode == other.pNode;
 			};
 
+			bool operator<(const JPSNode& other) const
+			{
+				return estimatedTotalCost < other.estimatedTotalCost;
+			};
 		};
 
 		std::vector<T_NodeType*> FindPath(T_NodeType* pStartNode, T_NodeType* pDestinationNode);
+		std::vector<T_NodeType*> GetJumpPoints() const;
 
 	private:
 		float GetHeuristicCost(T_NodeType* pStartNode, T_NodeType* pEndNode) const;
@@ -34,6 +42,7 @@ namespace Elite
 		bool IsNodeBlocked(float col, float row)const;
 
 		GridGraph<T_NodeType, T_ConnectionType>* m_pGraph;
+		std::vector<T_NodeType*> m_JumpPoints;
 		Heuristic m_HeuristicFunction;
 	};
 
@@ -49,76 +58,94 @@ namespace Elite
 	{
 		std::vector<JPSNode> openList;
 		std::vector<JPSNode> closedList;
-		std::vector<JPSNode> testList;
+		std::vector<T_NodeType*> path;
+		std::vector<T_NodeType*> jumpPoints;
+
 
 		JPSNode startNode;
 		startNode.pNode = pStartNode;
-		startNode.pParentNode = pStartNode;
+		startNode.pParentNode = nullptr;
+		startNode.costSoFar = 0;
+		startNode.estimatedTotalCost = GetHeuristicCost(pStartNode, pGoalNode);
 		openList.push_back(startNode);
+
 
 		while (!openList.empty())
 		{
-			//for (JPSNode* currentNode : openList)
-			for(int idx = 0;idx < openList.size(); idx++ )
-			{
-				JPSNode currentNode = openList.at(idx);
+			JPSNode currentNode = *std::min_element(openList.begin(), openList.end());
 
 
-				//goalNode found
-				if (currentNode.pNode == pGoalNode)
-				{
-					std::vector<T_NodeType*> testPath;
-					for (JPSNode newNode : closedList)
-					{
-						testPath.push_back(newNode.pNode);
-					}
-					return testPath;
-					break;
-				}
-
-				std::vector<T_NodeType*> successorNodes = GetSuccessors(currentNode, pStartNode, pGoalNode);
-				
+			if (std::find(closedList.begin(), closedList.end(), currentNode) == closedList.end())
 				closedList.push_back(currentNode);
-				
 
-				for (T_NodeType* successedNode : successorNodes)
+
+			jumpPoints.push_back(currentNode.pNode);
+			auto itNode = std::prev(closedList.end());
+			openList.erase(std::remove(openList.begin(), openList.end(), currentNode));
+
+
+			if (currentNode.pNode == pGoalNode)
+			{
+				path.clear();
+				JPSNode newNode = currentNode;
+				while (newNode.pParentNode != nullptr)
 				{
-
-					auto it = std::find_if(closedList.begin(), closedList.end(), [successedNode](const JPSNode& lhs) {return lhs.pNode == successedNode; });
-					if (it == closedList.end())
-					{
-						JPSNode pSuccessor;
-						pSuccessor.pNode = successedNode;
-						pSuccessor.pParentNode = currentNode.pNode;
-						openList.push_back(pSuccessor);
-					}
+					path.push_back(newNode.pNode);
+					newNode = *newNode.pParentNode;
 				}
-				openList.erase(std::remove(openList.begin(), openList.end(), currentNode));
-
-				idx -= 1;
+				path.push_back(newNode.pNode);
+				break;
 			}
 
-			//for (const JPSNode& newNode : testList)
-			//{
-			//	auto it = std::find_if(closedList.begin(), closedList.end(), [newNode](const JPSNode& lhs) {return lhs.pNode == newNode.pNode; });
-			//	if (it == closedList.end())
-			//	{
-			//		openList.push_back(newNode);
-			//	}
-			//}
-			//testList.clear();
-			//
+
+			std::vector<T_NodeType*> successorNodes = GetSuccessors(currentNode, pStartNode, pGoalNode);
+			for (T_NodeType* successedNode : successorNodes)
+			{
+				auto openIt = std::find_if(openList.begin(), openList.end(), [successedNode](const JPSNode& lhs) {return lhs.pNode == successedNode; });
+				auto closedIt = std::find_if(closedList.begin(), closedList.end(), [successedNode](const JPSNode& lhs) {return lhs.pNode == successedNode; });
+				if (openIt == openList.end() && closedIt == closedList.end())
+				{
+					JPSNode pSuccessor;
+					pSuccessor.pNode = successedNode;
+
+					JPSNode* pParentNode = new JPSNode{};
+					pParentNode->pNode = currentNode.pNode;
+					pParentNode->pParentNode = currentNode.pParentNode;
+					pParentNode->costSoFar = currentNode.costSoFar;
+					pParentNode->estimatedTotalCost = currentNode.estimatedTotalCost;
+
+					pSuccessor.pParentNode = pParentNode;
+					pSuccessor.costSoFar = currentNode.costSoFar + m_pGraph->GetNodePos((*itNode).pNode).Distance(m_pGraph->GetNodePos(successedNode));
+					pSuccessor.estimatedTotalCost = GetHeuristicCost(successedNode, pGoalNode) + pSuccessor.costSoFar;
+
+					openList.push_back(pSuccessor);
+				}
+			}
+
+
 		}
 
-
-		std::vector<T_NodeType*> testPath;
-		for (const JPSNode& newNode : closedList)
+		for (JPSNode& node : closedList)
 		{
-			testPath.push_back(newNode.pNode);
+			if (node.pParentNode)
+			{
+				delete node.pParentNode;
+				node.pParentNode = nullptr;
+			}
 		}
+		for (JPSNode& node : openList)
+		{
+			if (node.pParentNode)
+			{
+				delete node.pParentNode;
+				node.pParentNode = nullptr;
+			}
+		}
+		//return jumpPoints;
 
+		std::reverse(path.begin(), path.end());
+		return path;
 
-		return testPath;
 	}
 
 	template <class T_NodeType, class T_ConnectionType>
@@ -157,7 +184,11 @@ namespace Elite
 
 
 			if (jumpPoint != nullptr)
+			{
 				successors.push_back(jumpPoint);
+				if (jumpPoint == pEndNode)
+					return successors;
+			}
 		}
 		return successors;
 	}
@@ -166,7 +197,7 @@ namespace Elite
 	std::vector<T_NodeType*> Elite::JPS<T_NodeType, T_ConnectionType>::GetNeighbours(const JPSNode& node) const
 	{
 
-		Elite::Vector2 parentPos = m_pGraph->GetNodePos(node.pParentNode->GetIndex());
+		Elite::Vector2 parentPos = m_pGraph->GetNodePos(node.pParentNode->pNode->GetIndex());
 		Elite::Vector2 pos = m_pGraph->GetNodePos(node.pNode->GetIndex());
 
 		std::vector<T_NodeType*> neighbours;
@@ -186,7 +217,7 @@ namespace Elite
 
 				//CHECKING FOR FORCED NEIGHBOUR
 				if (IsNodeBlocked(pos.x, pos.y - 1))//if the node below is blocked
-					if(!IsNodeBlocked(pos.x + directionX, pos.y - 1))
+					if (!IsNodeBlocked(pos.x + directionX, pos.y - 1))
 						neighbours.push_back(m_pGraph->GetNode(int(pos.x + directionX), int(pos.y - 1)));//push back a forced neighbour
 
 				//CHECKING FOR FORCED NEIGHBOUR
@@ -213,21 +244,29 @@ namespace Elite
 				//CHECKING FOR FORCED NEIGHBOUR
 				if (IsNodeBlocked(pos.x - 1, pos.y))//if the node to the left is blocked
 					if (!IsNodeBlocked(pos.x - 1, pos.y + directionY))
-						neighbours.push_back(m_pGraph->GetNode(int(pos.x - 1),int(pos.y + directionY)));//push back a forced neighbour
+						neighbours.push_back(m_pGraph->GetNode(int(pos.x - 1), int(pos.y + directionY)));//push back a forced neighbour
 			}
 			return neighbours;
 		}
 
 
 		//diagonal movement
-		if (!IsNodeBlocked(pos.x + directionX, pos.y + directionY))
-			neighbours.push_back(m_pGraph->GetNode(int(pos.x + directionX), int(pos.y + directionY)));
+		bool canMoveDiagonal{ false };
 
 		if (!IsNodeBlocked(pos.x + directionX, pos.y))
+		{
 			neighbours.push_back(m_pGraph->GetNode(int(pos.x + directionX), int(pos.y)));
+			canMoveDiagonal = true;
+		}
 
-		if(!IsNodeBlocked(pos.x, pos.y + directionY))
+		if (!IsNodeBlocked(pos.x, pos.y + directionY))
+		{ 
 			neighbours.push_back(m_pGraph->GetNode(int(pos.x), int(pos.y + directionY)));
+			canMoveDiagonal = true;
+		}
+
+		if (!IsNodeBlocked(pos.x + directionX, pos.y + directionY) && canMoveDiagonal)
+			neighbours.push_back(m_pGraph->GetNode(int(pos.x + directionX), int(pos.y + directionY)));
 
 
 		//CHECKING FOR FORCED NEIGHBOUR
@@ -262,15 +301,15 @@ namespace Elite
 		if (nextPos == m_pGraph->GetNodePos(pEndNode))
 			return pEndNode;
 
-		
-		
+
+
 		if (horizontal != 0 && vertical != 0)//current search is a diagonal search
 		{
 			//check horizontal and vertical for 
-			
+
 			if (IsNodeBlocked(nextPos.x - horizontal, nextPos.y))
 			{
-				if(!IsNodeBlocked(nextPos.x - horizontal, nextPos.y + vertical))
+				if (!IsNodeBlocked(nextPos.x - horizontal, nextPos.y + vertical))
 					return m_pGraph->GetNode(int(nextPos.x), int(nextPos.y));
 			}
 
@@ -289,9 +328,8 @@ namespace Elite
 
 
 		}
-		else if(horizontal != 0)//horizontal search
+		else if (horizontal != 0)//horizontal search
 		{
-			Elite::Vector2 currentPos{ m_pGraph->GetNodePos(parent) };
 
 			if (IsNodeBlocked(nextPos.x, nextPos.y + 1))//check if node above is blocked
 			{
@@ -333,7 +371,7 @@ namespace Elite
 
 		}
 
-		T_NodeType* nextNode{m_pGraph->GetNode(int(nextPos.x), int(nextPos.y))};
+		T_NodeType* nextNode{ m_pGraph->GetNode(int(nextPos.x), int(nextPos.y)) };
 		Jump(nextNode, horizontal, vertical, pStartNode, pEndNode);
 	}
 
@@ -360,6 +398,11 @@ namespace Elite
 		return m_HeuristicFunction(abs(toDestination.x), abs(toDestination.y));
 	}
 
+	template <class T_NodeType, class T_ConnectionType>
+	std::vector<T_NodeType*> Elite::JPS<T_NodeType, T_ConnectionType>::GetJumpPoints() const
+	{
+		return m_JumpPoints;
+	}
 
 
 }

@@ -17,8 +17,7 @@ namespace Elite
 
 			bool operator==(const JPSNode& other) const
 			{
-				return pNode == other.pNode
-					&& pParentNode == other.pParentNode;
+				return pNode == other.pNode;
 			};
 
 		};
@@ -28,9 +27,9 @@ namespace Elite
 	private:
 		float GetHeuristicCost(T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 
-		std::vector<T_NodeType*> GetSuccessors(JPSNode* currentNode, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
+		std::vector<T_NodeType*> GetSuccessors(const JPSNode& currentNode, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
 		T_NodeType* Jump(T_NodeType* Parent, int horizontal, int vertical, T_NodeType* pStartNode, T_NodeType* pEndNode) const;
-		std::vector<T_NodeType*> GetNeighbours(JPSNode* node) const;
+		std::vector<T_NodeType*> GetNeighbours(const JPSNode& node) const;
 
 		bool IsNodeBlocked(float col, float row)const;
 
@@ -48,13 +47,13 @@ namespace Elite
 	template <class T_NodeType, class T_ConnectionType>
 	std::vector<T_NodeType*> Elite::JPS<T_NodeType, T_ConnectionType>::FindPath(T_NodeType* pStartNode, T_NodeType* pGoalNode)
 	{
-		std::vector<JPSNode*> openList;
-		std::vector<JPSNode*> closedList;
-		std::vector<JPSNode*> testList;
+		std::vector<JPSNode> openList;
+		std::vector<JPSNode> closedList;
+		std::vector<JPSNode> testList;
 
-		JPSNode* startNode = new JPSNode{};
-		startNode->pNode = pStartNode;
-		startNode->pParentNode = pStartNode;
+		JPSNode startNode;
+		startNode.pNode = pStartNode;
+		startNode.pParentNode = pStartNode;
 		openList.push_back(startNode);
 
 		while (!openList.empty())
@@ -62,20 +61,20 @@ namespace Elite
 			//for (JPSNode* currentNode : openList)
 			for(int idx = 0;idx < openList.size(); idx++ )
 			{
-				JPSNode* currentNode = openList.at(idx);
+				JPSNode currentNode = openList.at(idx);
 
 
 				//goalNode found
-				//if (currentNode->pNode == pGoalNode)
-				//{
-				//	std::vector<T_NodeType*> testPath;
-				//	for (JPSNode* newNode : closedList)
-				//	{
-				//		testPath.push_back(newNode->pNode);
-				//	}
-				//	return testPath;
-				//	break;
-				//}
+				if (currentNode.pNode == pGoalNode)
+				{
+					std::vector<T_NodeType*> testPath;
+					for (JPSNode newNode : closedList)
+					{
+						testPath.push_back(newNode.pNode);
+					}
+					return testPath;
+					break;
+				}
 
 				std::vector<T_NodeType*> successorNodes = GetSuccessors(currentNode, pStartNode, pGoalNode);
 				
@@ -84,41 +83,51 @@ namespace Elite
 
 				for (T_NodeType* successedNode : successorNodes)
 				{
-					JPSNode* pSuccessor = new JPSNode{};
-					pSuccessor->pNode = successedNode;
-					pSuccessor->pParentNode = currentNode->pNode;
 
-					testList.push_back(pSuccessor);
+					auto it = std::find_if(closedList.begin(), closedList.end(), [successedNode](const JPSNode& lhs) {return lhs.pNode == successedNode; });
+					if (it == closedList.end())
+					{
+						JPSNode pSuccessor;
+						pSuccessor.pNode = successedNode;
+						pSuccessor.pParentNode = currentNode.pNode;
+						openList.push_back(pSuccessor);
+					}
 				}
 				openList.erase(std::remove(openList.begin(), openList.end(), currentNode));
+
+				idx -= 1;
 			}
 
-			for (JPSNode* newNode : testList)
-			{
-				openList.push_back(newNode);
-			}
-			testList.clear();
-
+			//for (const JPSNode& newNode : testList)
+			//{
+			//	auto it = std::find_if(closedList.begin(), closedList.end(), [newNode](const JPSNode& lhs) {return lhs.pNode == newNode.pNode; });
+			//	if (it == closedList.end())
+			//	{
+			//		openList.push_back(newNode);
+			//	}
+			//}
+			//testList.clear();
+			//
 		}
 
 
 		std::vector<T_NodeType*> testPath;
-		for (JPSNode* newNode : closedList)
+		for (const JPSNode& newNode : closedList)
 		{
-			testPath.push_back(newNode->pNode);
+			testPath.push_back(newNode.pNode);
 		}
 
-		delete startNode;
+
 		return testPath;
 	}
 
 	template <class T_NodeType, class T_ConnectionType>
-	std::vector<T_NodeType*> Elite::JPS<T_NodeType, T_ConnectionType>::GetSuccessors(JPSNode* currentNode, T_NodeType* pStartNode, T_NodeType* pEndNode) const
+	std::vector<T_NodeType*> Elite::JPS<T_NodeType, T_ConnectionType>::GetSuccessors(const JPSNode& currentNode, T_NodeType* pStartNode, T_NodeType* pEndNode) const
 	{
 		std::vector<T_NodeType*> successors;
 		std::vector<T_NodeType*> neigbours;
 
-		if (currentNode->pNode == pStartNode)
+		if (currentNode.pNode == pStartNode)
 		{
 			for (T_ConnectionType* connection : m_pGraph->GetNodeConnections(pStartNode->GetIndex()))
 			{
@@ -137,14 +146,14 @@ namespace Elite
 		{
 
 			Elite::Vector2  neigbourPos = m_pGraph->GetNodePos(neigbour);
-			Elite::Vector2  currentPos = m_pGraph->GetNodePos(currentNode->pNode->GetIndex());
+			Elite::Vector2  currentPos = m_pGraph->GetNodePos(currentNode.pNode->GetIndex());
 
 			int directionX = Clamp<int>(int(neigbourPos.x - currentPos.x), -1, 1);
 			int directionY = Clamp<int>(int(neigbourPos.y - currentPos.y), -1, 1);
 
 
 			//Get JumpPoint
-			T_NodeType* jumpPoint = Jump(currentNode->pNode, directionX, directionY, pStartNode, pEndNode);
+			T_NodeType* jumpPoint = Jump(currentNode.pNode, directionX, directionY, pStartNode, pEndNode);
 
 
 			if (jumpPoint != nullptr)
@@ -154,11 +163,11 @@ namespace Elite
 	}
 
 	template <class T_NodeType, class T_ConnectionType>
-	std::vector<T_NodeType*> Elite::JPS<T_NodeType, T_ConnectionType>::GetNeighbours(JPSNode* node) const
+	std::vector<T_NodeType*> Elite::JPS<T_NodeType, T_ConnectionType>::GetNeighbours(const JPSNode& node) const
 	{
 
-		Elite::Vector2 parentPos = m_pGraph->GetNodePos(node->pParentNode->GetIndex());
-		Elite::Vector2 pos = m_pGraph->GetNodePos(node->pNode->GetIndex());
+		Elite::Vector2 parentPos = m_pGraph->GetNodePos(node.pParentNode->GetIndex());
+		Elite::Vector2 pos = m_pGraph->GetNodePos(node.pNode->GetIndex());
 
 		std::vector<T_NodeType*> neighbours;
 
@@ -222,15 +231,15 @@ namespace Elite
 
 
 		//CHECKING FOR FORCED NEIGHBOUR
-		if (IsNodeBlocked(parentPos.x + directionX, parentPos.y))
-		{
-			if (!IsNodeBlocked(pos.x + directionX, pos.y - directionY))
-				neighbours.push_back(m_pGraph->GetNode(int(pos.x + directionX), int(pos.y - directionY)));
-		}
-		if (IsNodeBlocked(parentPos.x, parentPos.y + directionY))
+		if (IsNodeBlocked(pos.x - directionX, pos.y))
 		{
 			if (!IsNodeBlocked(pos.x - directionX, pos.y + directionY))
 				neighbours.push_back(m_pGraph->GetNode(int(pos.x - directionX), int(pos.y + directionY)));
+		}
+		if (IsNodeBlocked(pos.x, pos.y - directionY))
+		{
+			if (!IsNodeBlocked(pos.x + directionX, pos.y - directionY))
+				neighbours.push_back(m_pGraph->GetNode(int(pos.x + directionX), int(pos.y - directionY)));
 		}
 		return neighbours;
 
@@ -326,8 +335,6 @@ namespace Elite
 
 		T_NodeType* nextNode{m_pGraph->GetNode(int(nextPos.x), int(nextPos.y))};
 		Jump(nextNode, horizontal, vertical, pStartNode, pEndNode);
-
-
 	}
 
 

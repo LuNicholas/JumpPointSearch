@@ -94,9 +94,7 @@ void App_PathfindingJPS::Update(float deltaTime)
 			}
 		}
 
-
-		m_pGridGraph->
-
+		m_vJumpPoints = pathfinder.GetJumpPoints();
 
 		m_UpdatePath = false;
 		std::cout << "New Path Calculated" << std::endl;
@@ -131,6 +129,13 @@ void App_PathfindingJPS::Render(float deltaTime) const
 	if (m_vPath.size() > 0)
 	{
 		m_GraphRenderer.RenderHighlightedGrid(m_pGridGraph, m_vPath);
+	}
+
+	//render jumpPoints
+	Elite::Color color{ 0,0,0 };
+	for(GridTerrainNode* node : m_vJumpPoints)
+	{
+		m_GraphRenderer.RenderRectNode(m_pGridGraph->GetNodeWorldPos(node), "", 14, color);
 	}
 
 }

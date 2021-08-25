@@ -59,8 +59,7 @@ namespace Elite
 		std::vector<JPSNode> openList;
 		std::vector<JPSNode> closedList;
 		std::vector<T_NodeType*> path;
-		std::vector<T_NodeType*> jumpPoints;
-
+		m_JumpPoints.clear();
 
 		JPSNode startNode;
 		startNode.pNode = pStartNode;
@@ -79,7 +78,7 @@ namespace Elite
 				closedList.push_back(currentNode);
 
 
-			jumpPoints.push_back(currentNode.pNode);
+			m_JumpPoints.push_back(currentNode.pNode);
 			auto itNode = std::prev(closedList.end());
 			openList.erase(std::remove(openList.begin(), openList.end(), currentNode));
 

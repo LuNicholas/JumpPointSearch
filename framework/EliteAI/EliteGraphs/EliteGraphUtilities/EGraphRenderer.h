@@ -26,9 +26,11 @@ namespace Elite
 		template<class T_NodeType, class T_ConnectionType>
 		void RenderHighlightedGrid(GridGraph<T_NodeType, T_ConnectionType>* pGraph, std::vector<T_NodeType*> path, Color col = HIGHLIGHTED_NODE_COLOR) const;
 
+
+		void RenderRectNode(Vector2 pos, std::string text = "", float width = 3.0f, Elite::Color col = DEFAULT_NODE_COLOR, float depth = 0.0f) const;
 	private:
 		void RenderCircleNode(Vector2 pos, std::string text = "", float radius = 3.0f, Elite::Color col = DEFAULT_NODE_COLOR, float depth = 0.0f) const;
-		void RenderRectNode(Vector2 pos, std::string text = "", float width = 3.0f, Elite::Color col = DEFAULT_NODE_COLOR, float depth = 0.0f) const;
+		
 		void RenderConnection(GraphConnection* con, Elite::Vector2 toPos, Elite::Vector2 fromPos, std::string text, Elite::Color col = DEFAULT_CONNECTION_COLOR, float depth = 0.0f) const;
 	
 	

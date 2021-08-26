@@ -80,7 +80,9 @@ if (currentNode == GoalNode)
 ### References
 
 **Original paper by Daniel Harabor and Alban Grastien**
+
 (https://www.researchgate.net/publication/221603063_Online_Graph_Pruning_for_Pathfinding_On_Grid_Maps)
   
 **Explanation on Jump point search with interactable path finding to try out**
+
 (https://zerowidth.com/2013/a-visual-explanation-of-jump-point-search.html)
